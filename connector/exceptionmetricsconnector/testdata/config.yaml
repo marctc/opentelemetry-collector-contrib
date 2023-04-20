@@ -1,0 +1,19 @@
+# default configuration
+exceptionmetrics/default:
+
+# configuration with all possible parameters
+exceptionmetrics/full:
+  dimensions_cache_size: 1500
+
+  # Additional list of dimensions on top of:
+  # - service.name
+  # - span.name
+  # - span.kind
+  # - status.code
+  dimensions:
+    - name: exception.type
+    - name: exception.message
+
+  # The period on which all metrics (whose dimension keys remain in cache) will be emitted.
+  # Default: 15s.
+  metrics_flush_interval: 30s
