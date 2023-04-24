@@ -117,34 +117,6 @@ func newConnector(logger *zap.Logger, config component.Config, ticker *clock.Tic
 // Start implements the component.Component interface.
 func (p *connectorImp) Start(ctx context.Context, _ component.Host) error {
 	p.logger.Info("Starting exceptionsconnector")
-	// exporters := host.GetExporters()
-
-	// var availableMetricsExporters []string
-
-	// // The available list of exporters come from any configured metrics pipelines' exporters.
-	// for k, exp := range exporters[component.DataTypeMetrics] {
-	// 	metricsExp, ok := exp.(exporter.Metrics)
-	// 	if !ok {
-	// 		return fmt.Errorf("the exporter %q isn't a metrics exporter", k.String())
-	// 	}
-
-	// 	availableMetricsExporters = append(availableMetricsExporters, k.String())
-
-	// 	p.logger.Debug("Looking for exceptions exporter from available exporters",
-	// 		zap.String("exceptions-exporter", p.config.MetricsExporter),
-	// 		zap.Any("available-exporters", availableMetricsExporters),
-	// 	)
-	// 	if k.String() == p.config.MetricsExporter {
-	// 		p.metricsConsumer = metricsExp
-	// 		p.logger.Info("Found exporter", zap.String("exceptions-exporter", p.config.MetricsExporter))
-	// 		break
-	// 	}
-	// }
-	// if p.metricsConsumer == nil {
-	// 	return fmt.Errorf("failed to find metrics exporter: '%s'; please configure metrics_exporter from one of: %+v",
-	// 		p.config.MetricsExporter, availableMetricsExporters)
-	// }
-	// p.logger.Info("Started exceptionsconnector")
 	p.started = true
 	go func() {
 		for {
@@ -186,13 +158,10 @@ func (p *connectorImp) ConsumeTraces(_ context.Context, traces ptrace.Traces) er
 	p.aggregateExceptionMetrics(traces)
 	p.lock.Unlock()
 	return nil
-	//return multierr.Combine(p.tracesToMetrics(ctx, traces), p.nextConsumer.ConsumeTraces(ctx, traces))
 }
 
 func (p *connectorImp) exportMetrics(ctx context.Context) error {
 	p.lock.Lock()
-
-	//p.aggregateExceptionMetrics(traces)
 	m, err := p.buildExceptionMetrics()
 	p.resetAccumulatedMetrics()
 
@@ -377,38 +346,3 @@ func (p *connectorImp) cache(serviceName string, span ptrace.Span, k metricKey, 
 		p.metricKeyToDimensions.Add(k, p.buildDimensionKVs(serviceName, span, resourceAttrs))
 	}
 }
-
-// // copied from prometheus-go-metric-exporter
-// // sanitize replaces non-alphanumeric characters with underscores in s.
-// func sanitize(s string, skipSanitizeLabel bool) string {
-// 	if len(s) == 0 {
-// 		return s
-// 	}
-
-// 	// Note: No length limit for label keys because Prometheus doesn't
-// 	// define a length limit, thus we should NOT be truncating label keys.
-// 	// See https://github.com/orijtech/prometheus-go-metrics-exporter/issues/4.
-// 	s = strings.Map(sanitizeRune, s)
-// 	if unicode.IsDigit(rune(s[0])) {
-// 		s = "key_" + s
-// 	}
-// 	// replace labels starting with _ only when skipSanitizeLabel is disabled
-// 	if !skipSanitizeLabel && strings.HasPrefix(s, "_") {
-// 		s = "key" + s
-// 	}
-// 	// labels starting with __ are reserved in prometheus
-// 	if strings.HasPrefix(s, "__") {
-// 		s = "key" + s
-// 	}
-// 	return s
-// }
-
-// // copied from prometheus-go-metric-exporter
-// // sanitizeRune converts anything that is not a letter or digit to an underscore
-// func sanitizeRune(r rune) rune {
-// 	if unicode.IsLetter(r) || unicode.IsDigit(r) {
-// 		return r
-// 	}
-// 	// Everything else turns into an underscore
-// 	return '_'
-// }
