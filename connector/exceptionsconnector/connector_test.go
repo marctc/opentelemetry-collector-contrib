@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package exceptionmetricsconnector
+package exceptionsconnector
 
 import (
 	"bytes"
@@ -39,7 +39,7 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 	"google.golang.org/grpc/metadata"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/exceptionmetricsconnector/mocks"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/exceptionsconnector/mocks"
 )
 
 const (
@@ -140,9 +140,9 @@ func TestConcurrentShutdown(t *testing.T) {
 		return len(allLogs) > 0
 	}, time.Second, time.Millisecond*10)
 
-	// Building exceptionmetrics connector...
-	// Starting exceptionmetricsconnector...
-	// Shutting down exceptionmetricsconnector...
+	// Building exceptions connector...
+	// Starting exceptionsconnector...
+	// Shutting down exceptionsconnector...
 	// Stopping ticker.
 	assert.Len(t, allLogs, 4)
 }
@@ -332,7 +332,7 @@ func verifyConsumeMetricsInput(t testing.TB, input pmetric.Metrics, numCumulativ
 
 	ilm := rm.At(0).ScopeMetrics()
 	require.Equal(t, 1, ilm.Len())
-	assert.Equal(t, "exceptionmetricsconnector", ilm.At(0).Scope().Name())
+	assert.Equal(t, "exceptionsconnector", ilm.At(0).Scope().Name())
 
 	m := ilm.At(0).Metrics()
 	require.Equal(t, 1, m.Len())

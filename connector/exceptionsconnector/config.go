@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package exceptionmetricsconnector
+package exceptionsconnector
 
 import (
 	"fmt"
@@ -27,7 +27,7 @@ type Dimension struct {
 	Default *string `mapstructure:"default"`
 }
 
-// Config defines te configuration options for exceptionmetricsconnector
+// Config defines te configuration options for exceptionsconnector
 type Config struct {
 	// Dimensions defines the list of additional dimensions on top of the provided:
 	// - service.name

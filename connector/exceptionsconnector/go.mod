@@ -1,4 +1,4 @@
-module github.com/open-telemetry/opentelemetry-collector-contrib/connector/exceptionmetricsconnector
+module github.com/open-telemetry/opentelemetry-collector-contrib/connector/exceptionsconnector
 
 go 1.19
 

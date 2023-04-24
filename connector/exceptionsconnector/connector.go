@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package exceptionmetricsconnector
+package exceptionsconnector
 
 import (
 	"bytes"
@@ -30,7 +30,7 @@ import (
 	conventions "go.opentelemetry.io/collector/semconv/v1.6.1"
 	"go.uber.org/zap"
 
-	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/exceptionmetricsconnector/internal/cache"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/connector/exceptionsconnector/internal/cache"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/internal/coreinternal/traceutil"
 )
 
@@ -93,7 +93,7 @@ func newDimensions(cfgDims []Dimension) []dimension {
 }
 
 func newConnector(logger *zap.Logger, config component.Config, ticker *clock.Ticker) (*connectorImp, error) {
-	logger.Info("Building exceptionmetricsconnector")
+	logger.Info("Building exceptionsconnector")
 	cfg := config.(*Config)
 
 	metricKeyToDimensionsCache, err := cache.NewCache[metricKey, pcommon.Map](cfg.DimensionsCacheSize)
@@ -116,7 +116,7 @@ func newConnector(logger *zap.Logger, config component.Config, ticker *clock.Tic
 
 // Start implements the component.Component interface.
 func (p *connectorImp) Start(ctx context.Context, _ component.Host) error {
-	p.logger.Info("Starting exceptionmetricsconnector")
+	p.logger.Info("Starting exceptionsconnector")
 	// exporters := host.GetExporters()
 
 	// var availableMetricsExporters []string
@@ -130,13 +130,13 @@ func (p *connectorImp) Start(ctx context.Context, _ component.Host) error {
 
 	// 	availableMetricsExporters = append(availableMetricsExporters, k.String())
 
-	// 	p.logger.Debug("Looking for exceptionmetrics exporter from available exporters",
-	// 		zap.String("exceptionmetrics-exporter", p.config.MetricsExporter),
+	// 	p.logger.Debug("Looking for exceptions exporter from available exporters",
+	// 		zap.String("exceptions-exporter", p.config.MetricsExporter),
 	// 		zap.Any("available-exporters", availableMetricsExporters),
 	// 	)
 	// 	if k.String() == p.config.MetricsExporter {
 	// 		p.metricsConsumer = metricsExp
-	// 		p.logger.Info("Found exporter", zap.String("exceptionmetrics-exporter", p.config.MetricsExporter))
+	// 		p.logger.Info("Found exporter", zap.String("exceptions-exporter", p.config.MetricsExporter))
 	// 		break
 	// 	}
 	// }
@@ -144,7 +144,7 @@ func (p *connectorImp) Start(ctx context.Context, _ component.Host) error {
 	// 	return fmt.Errorf("failed to find metrics exporter: '%s'; please configure metrics_exporter from one of: %+v",
 	// 		p.config.MetricsExporter, availableMetricsExporters)
 	// }
-	// p.logger.Info("Started exceptionmetricsconnector")
+	// p.logger.Info("Started exceptionsconnector")
 	p.started = true
 	go func() {
 		for {
@@ -162,7 +162,7 @@ func (p *connectorImp) Start(ctx context.Context, _ component.Host) error {
 // Shutdown implements the component.Component interface.
 func (p *connectorImp) Shutdown(context.Context) error {
 	p.shutdownOnce.Do(func() {
-		p.logger.Info("Shutting down exceptionmetrics connector")
+		p.logger.Info("Shutting down exceptions connector")
 		if p.started {
 			p.logger.Info("Stopping ticker")
 			p.ticker.Stop()
@@ -257,7 +257,7 @@ func (p *connectorImp) aggregateExceptionMetrics(traces ptrace.Traces) {
 func (p *connectorImp) buildExceptionMetrics() (pmetric.Metrics, error) {
 	m := pmetric.NewMetrics()
 	ilm := m.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty()
-	ilm.Scope().SetName("exceptionmetricsconnector")
+	ilm.Scope().SetName("exceptionsconnector")
 
 	if err := p.collectExceptions(ilm); err != nil {
 		return pmetric.Metrics{}, err

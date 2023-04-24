@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package exceptionmetricsconnector
+package exceptionsconnector
 
 import (
 	"context"
@@ -26,12 +26,12 @@ import (
 
 const (
 	// The value of "type" key in configuration.
-	typeStr = "exceptionmetrics"
+	typeStr = "exceptions"
 	// The stability level of the processor.
 	stability = component.StabilityLevelDevelopment
 )
 
-// NewFactory creates a factory for the exceptionmetrics connector.
+// NewFactory creates a factory for the exceptions connector.
 func NewFactory() connector.Factory {
 	return connector.NewFactory(
 		typeStr,

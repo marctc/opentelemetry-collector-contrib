@@ -1,4 +1,4 @@
-# Exception Metrics Connector
+# Exceptions Connector
 
 | Status                   |               |
 | ------------------------ |---------------|
@@ -38,11 +38,11 @@ The following settings can be optionally configured:
 
 ## Examples
 
-The following is a simple example usage of the `exceptionmetrics` connector.
+The following is a simple example usage of the `exceptions` connector.
 
 For configuration examples on other use cases, please refer to [More Examples](#more-examples).
 
-The full list of settings exposed for this connector are documented [here](../../connector/exceptionmetrics/config.go).
+The full list of settings exposed for this connector are documented [here](../../connector/exceptionsconnector/config.go).
 
 
 ```yaml
@@ -53,21 +53,21 @@ exporters:
   nop:
 
 connectors:
-  exceptionmetrics:
+  exceptions:
 
 service:
   pipelines:
     traces:
       receivers: [nop]
-      exporters: [exceptionmetrics]
+      exporters: [exceptions]
     metrics:
-      receivers: [exceptionmetrics]
+      receivers: [exceptions]
       exporters: [nop]
 ```
 
 ### More Examples
 
-For more example configuration covering various other use cases, please visit the [testdata directory](../../connector/exceptionmetricsconnector/testdata).
+For more example configuration covering various other use cases, please visit the [testdata directory](../../connector/exceptionsconnector/testdata).
 
 [development]: https://github.com/open-telemetry/opentelemetry-collector#development
 [contrib]:https://github.com/open-telemetry/opentelemetry-collector-releases/tree/main/distributions/otelcol-contrib

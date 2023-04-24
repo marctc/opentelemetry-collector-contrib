@@ -1,8 +1,8 @@
 # default configuration
-exceptionmetrics/default:
+exceptions/default:
 
 # configuration with all possible parameters
-exceptionmetrics/full:
+exceptions/full:
   dimensions_cache_size: 1500
 
   # Additional list of dimensions on top of:
