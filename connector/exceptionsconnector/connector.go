@@ -115,16 +115,16 @@ func newConnector(logger *zap.Logger, config component.Config, ticker *clock.Tic
 }
 
 // Start implements the component.Component interface.
-func (p *connectorImp) Start(ctx context.Context, _ component.Host) error {
-	p.logger.Info("Starting exceptionsconnector")
-	p.started = true
+func (c *connectorImp) Start(ctx context.Context, _ component.Host) error {
+	c.logger.Info("Starting exceptionsconnector")
+	c.started = true
 	go func() {
 		for {
 			select {
-			case <-p.done:
+			case <-c.done:
 				return
-			case <-p.ticker.C:
-				p.exportMetrics(ctx)
+			case <-c.ticker.C:
+				c.exportMetrics(ctx)
 			}
 		}
 	}()
@@ -132,63 +132,63 @@ func (p *connectorImp) Start(ctx context.Context, _ component.Host) error {
 }
 
 // Shutdown implements the component.Component interface.
-func (p *connectorImp) Shutdown(context.Context) error {
-	p.shutdownOnce.Do(func() {
-		p.logger.Info("Shutting down exceptions connector")
-		if p.started {
-			p.logger.Info("Stopping ticker")
-			p.ticker.Stop()
-			p.done <- struct{}{}
-			p.started = false
+func (c *connectorImp) Shutdown(context.Context) error {
+	c.shutdownOnce.Do(func() {
+		c.logger.Info("Shutting down exceptions connector")
+		if c.started {
+			c.logger.Info("Stopping ticker")
+			c.ticker.Stop()
+			c.done <- struct{}{}
+			c.started = false
 		}
 	})
 	return nil
 }
 
 // Capabilities implements the consumer interface.
-func (p *connectorImp) Capabilities() consumer.Capabilities {
+func (c *connectorImp) Capabilities() consumer.Capabilities {
 	return consumer.Capabilities{MutatesData: false}
 }
 
 // ConsumeTraces implements the consumer.Traces interface.
 // It aggregates the trace data to generate metrics.
-func (p *connectorImp) ConsumeTraces(_ context.Context, traces ptrace.Traces) error {
+func (c *connectorImp) ConsumeTraces(_ context.Context, traces ptrace.Traces) error {
 	// Forward trace data unmodified and propagate both metrics and trace pipeline errors, if any.
-	p.lock.Lock()
-	p.aggregateExceptionMetrics(traces)
-	p.lock.Unlock()
+	c.lock.Lock()
+	c.aggregateExceptionMetrics(traces)
+	c.lock.Unlock()
 	return nil
 }
 
-func (p *connectorImp) exportMetrics(ctx context.Context) error {
-	p.lock.Lock()
-	m, err := p.buildExceptionMetrics()
-	p.resetAccumulatedMetrics()
+func (c *connectorImp) exportMetrics(ctx context.Context) error {
+	c.lock.Lock()
+	m, err := c.buildExceptionMetrics()
+	c.resetAccumulatedMetrics()
 
 	// This component no longer needs to read the metrics once built, so it is safe to unlock.
-	p.lock.Unlock()
+	c.lock.Unlock()
 
 	if err != nil {
 		return err
 	}
 
-	if err = p.metricsConsumer.ConsumeMetrics(ctx, m); err != nil {
-		p.logger.Error("Failed ConsumeMetrics", zap.Error(err))
+	if err = c.metricsConsumer.ConsumeMetrics(ctx, m); err != nil {
+		c.logger.Error("Failed ConsumeMetrics", zap.Error(err))
 		return err
 	}
 	return nil
 }
 
 // getDimensionsByMetricKey gets dimensions from `metricKeyToDimensions` cache.
-func (p *connectorImp) getDimensionsByMetricKey(k metricKey) (pcommon.Map, error) {
-	if attributeMap, ok := p.metricKeyToDimensions.Get(k); ok {
+func (c *connectorImp) getDimensionsByMetricKey(k metricKey) (pcommon.Map, error) {
+	if attributeMap, ok := c.metricKeyToDimensions.Get(k); ok {
 		return attributeMap, nil
 	}
 	return pcommon.Map{}, fmt.Errorf("value not found in metricKeyToDimensions cache by key %q", k)
 }
 
 // aggregateExceptionMetrics aggregates data from spans to generate metrics.
-func (p *connectorImp) aggregateExceptionMetrics(traces ptrace.Traces) {
+func (c *connectorImp) aggregateExceptionMetrics(traces ptrace.Traces) {
 	for i := 0; i < traces.ResourceSpans().Len(); i++ {
 		rspans := traces.ResourceSpans().At(i)
 		resourceAttr := rspans.Resource().Attributes()
@@ -209,11 +209,11 @@ func (p *connectorImp) aggregateExceptionMetrics(traces ptrace.Traces) {
 						attr := event.Attributes()
 
 						// Always reset the buffer before re-using.
-						p.keyBuf.Reset()
-						buildKey(p.keyBuf, serviceName, span, p.dimensions, attr)
-						key := metricKey(p.keyBuf.String())
-						p.cache(serviceName, span, key, attr)
-						p.updateException(key, span.TraceID(), span.SpanID())
+						c.keyBuf.Reset()
+						buildKey(c.keyBuf, serviceName, span, c.dimensions, attr)
+						key := metricKey(c.keyBuf.String())
+						c.cache(serviceName, span, key, attr)
+						c.updateException(key, span.TraceID(), span.SpanID())
 					}
 				}
 			}
@@ -223,36 +223,36 @@ func (p *connectorImp) aggregateExceptionMetrics(traces ptrace.Traces) {
 
 // buildExceptionMetrics collects the computed raw metrics data, builds the metrics object and
 // writes the raw metrics data into the metrics object.
-func (p *connectorImp) buildExceptionMetrics() (pmetric.Metrics, error) {
+func (c *connectorImp) buildExceptionMetrics() (pmetric.Metrics, error) {
 	m := pmetric.NewMetrics()
 	ilm := m.ResourceMetrics().AppendEmpty().ScopeMetrics().AppendEmpty()
 	ilm.Scope().SetName("exceptionsconnector")
 
-	if err := p.collectExceptions(ilm); err != nil {
+	if err := c.collectExceptions(ilm); err != nil {
 		return pmetric.Metrics{}, err
 	}
 
-	p.metricKeyToDimensions.RemoveEvictedItems()
+	c.metricKeyToDimensions.RemoveEvictedItems()
 
 	return m, nil
 }
 
 // collectExceptions collects the exception metrics data and writes it into the metrics object.
-func (p *connectorImp) collectExceptions(ilm pmetric.ScopeMetrics) error {
+func (c *connectorImp) collectExceptions(ilm pmetric.ScopeMetrics) error {
 	mCalls := ilm.Metrics().AppendEmpty()
 	mCalls.SetName("exceptions_total")
 	mCalls.SetEmptySum().SetIsMonotonic(true)
 	mCalls.Sum().SetAggregationTemporality(pmetric.AggregationTemporalityCumulative)
 	dps := mCalls.Sum().DataPoints()
-	dps.EnsureCapacity(len(p.exceptions))
+	dps.EnsureCapacity(len(c.exceptions))
 	timestamp := pcommon.NewTimestampFromTime(time.Now())
-	for key, count := range p.exceptions {
+	for key, count := range c.exceptions {
 		dpCalls := dps.AppendEmpty()
-		dpCalls.SetStartTimestamp(p.startTimestamp)
+		dpCalls.SetStartTimestamp(c.startTimestamp)
 		dpCalls.SetTimestamp(timestamp)
 		dpCalls.SetIntValue(int64(count))
 
-		dimensions, err := p.getDimensionsByMetricKey(key)
+		dimensions, err := c.getDimensionsByMetricKey(key)
 		if err != nil {
 			return err
 		}
@@ -262,31 +262,42 @@ func (p *connectorImp) collectExceptions(ilm pmetric.ScopeMetrics) error {
 	return nil
 }
 
-func (p *connectorImp) resetAccumulatedMetrics() {
-	p.metricKeyToDimensions.Purge()
+func (c *connectorImp) resetAccumulatedMetrics() {
+	c.metricKeyToDimensions.Purge()
 }
 
-func (p *connectorImp) updateException(key metricKey, traceID pcommon.TraceID, spanID pcommon.SpanID) {
-	_, ok := p.exceptions[key]
+func (c *connectorImp) updateException(key metricKey, traceID pcommon.TraceID, spanID pcommon.SpanID) {
+	_, ok := c.exceptions[key]
 	if !ok {
-		p.exceptions[key] = 0
+		c.exceptions[key] = 0
 	}
 
-	p.exceptions[key]++
+	c.exceptions[key]++
 }
 
-func (p *connectorImp) buildDimensionKVs(serviceName string, span ptrace.Span, resourceAttrs pcommon.Map) pcommon.Map {
+func (c *connectorImp) buildDimensionKVs(serviceName string, span ptrace.Span, resourceAttrs pcommon.Map) pcommon.Map {
 	dims := pcommon.NewMap()
-	dims.EnsureCapacity(3 + len(p.dimensions))
+	dims.EnsureCapacity(3 + len(c.dimensions))
 	dims.PutStr(serviceNameKey, serviceName)
 	dims.PutStr(spanKindKey, traceutil.SpanKindStr(span.Kind()))
 	dims.PutStr(statusCodeKey, traceutil.StatusCodeStr(span.Status().Code()))
-	for _, d := range p.dimensions {
+	for _, d := range c.dimensions {
 		if v, ok := getDimensionValue(d, span.Attributes(), resourceAttrs); ok {
 			v.CopyTo(dims.PutEmpty(d.name))
 		}
 	}
 	return dims
+}
+
+// cache the dimension key-value map for the metricKey if there is a cache miss.
+// This enables a lookup of the dimension key-value map when constructing the metric like so:
+//
+//	LabelsMap().InitFromMap(p.metricKeyToDimensions[key])
+func (c *connectorImp) cache(serviceName string, span ptrace.Span, k metricKey, resourceAttrs pcommon.Map) {
+	// Use Get to ensure any existing key has its recent-ness updated.
+	if _, has := c.metricKeyToDimensions.Get(k); !has {
+		c.metricKeyToDimensions.Add(k, c.buildDimensionKVs(serviceName, span, resourceAttrs))
+	}
 }
 
 func concatDimensionValue(dest *bytes.Buffer, value string, prefixSep bool) {
@@ -334,15 +345,4 @@ func getDimensionValue(d dimension, spanAttr pcommon.Map, resourceAttr pcommon.M
 		return *d.value, true
 	}
 	return v, ok
-}
-
-// cache the dimension key-value map for the metricKey if there is a cache miss.
-// This enables a lookup of the dimension key-value map when constructing the metric like so:
-//
-//	LabelsMap().InitFromMap(p.metricKeyToDimensions[key])
-func (p *connectorImp) cache(serviceName string, span ptrace.Span, k metricKey, resourceAttrs pcommon.Map) {
-	// Use Get to ensure any existing key has its recent-ness updated.
-	if _, has := p.metricKeyToDimensions.Get(k); !has {
-		p.metricKeyToDimensions.Add(k, p.buildDimensionKVs(serviceName, span, resourceAttrs))
-	}
 }
