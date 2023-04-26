@@ -55,14 +55,20 @@ func TestNewConnector(t *testing.T) {
 			cfg := factory.CreateDefaultConfig().(*Config)
 			cfg.Dimensions = tc.dimensions
 
-			// Test
-			traceConnector, err := factory.CreateTracesToMetrics(context.Background(), creationParams, cfg, consumertest.NewNop())
-			smc := traceConnector.(*connectorImp)
+			// Test Metrics
+			traceMetricsConnector, err := factory.CreateTracesToMetrics(context.Background(), creationParams, cfg, consumertest.NewNop())
+			smc := traceMetricsConnector.(*connectorImp)
 
-			// Verify
 			assert.Nil(t, err)
 			assert.NotNil(t, smc)
+			assert.Equal(t, tc.wantDimensions, smc.dimensions)
 
+			// Test Logs
+			traceLogsConnector, err := factory.CreateTracesToLogs(context.Background(), creationParams, cfg, consumertest.NewNop())
+			slc := traceLogsConnector.(*connectorLogs)
+
+			assert.Nil(t, err)
+			assert.NotNil(t, slc)
 			assert.Equal(t, tc.wantDimensions, smc.dimensions)
 		})
 	}

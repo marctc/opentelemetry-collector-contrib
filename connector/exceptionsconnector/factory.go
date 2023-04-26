@@ -37,6 +37,7 @@ func NewFactory() connector.Factory {
 		typeStr,
 		createDefaultConfig,
 		connector.WithTracesToMetrics(createTracesToMetricsConnector, stability),
+		connector.WithTracesToLogs(createTracesToLogsConnector, stability),
 	)
 }
 
@@ -57,6 +58,15 @@ func createTracesToMetricsConnector(ctx context.Context, params connector.Create
 		return nil, err
 	}
 	c.metricsConsumer = nextConsumer
+	return c, nil
+}
+
+func createTracesToLogsConnector(ctx context.Context, params connector.CreateSettings, cfg component.Config, nextConsumer consumer.Logs) (connector.Traces, error) {
+	c, err := newConnectorLogs(params.Logger, cfg, metricsTicker(ctx, cfg))
+	if err != nil {
+		return nil, err
+	}
+	c.logsConsumer = nextConsumer
 	return c, nil
 }
 

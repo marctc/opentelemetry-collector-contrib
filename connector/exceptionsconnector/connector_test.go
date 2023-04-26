@@ -468,6 +468,7 @@ func initSpan(span span, s ptrace.Span) {
 	e.SetName("exception")
 	e.Attributes().PutStr("exception.type", "Exception")
 	e.Attributes().PutStr("exception.message", "Exception message")
+	e.Attributes().PutStr("exception.stacktrace", "Exception stacktrace")
 }
 
 func TestBuildKeySameServiceOperationCharSequence(t *testing.T) {
